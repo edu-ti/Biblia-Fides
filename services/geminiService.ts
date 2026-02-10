@@ -38,7 +38,7 @@ export const sendMessageToGemini = async (userMessage: string): Promise<BibleRes
       },
     });
 
-    const responseText = response.text;
+    const responseText = response.text();
 
     if (!responseText) {
       throw new Error("No response text received from Gemini.");
