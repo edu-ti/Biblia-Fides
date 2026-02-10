@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
-    "react-dom": "^19.2.4",
-    "react": "^19.2.4",
-    "uuid": "^13.0.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "axios": "^1.13.5",
     "firebase": "^12.9.0",
-    "axios": "^1.13.5"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.1.18",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
