@@ -1,30 +1,30 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut 
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut
 } from 'firebase/auth';
-import { 
-  getFirestore, 
-  collection, 
-  query, 
-  orderBy, 
-  getDocs, 
-  where 
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  getDocs,
+  where
 } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import { BibleResponseData } from "../types";
 
 // Configuração do Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyDPO_eVb75BOHqRfuYjhyTH0v7aCNdI1O0",
-  authDomain: "biblia-fides.firebaseapp.com",
-  projectId: "biblia-fides",
-  storageBucket: "biblia-fides.firebasestorage.app",
-  messagingSenderId: "74290043355",
-  appId: "1:74290043355:web:c7083042a575bd400feffe",
-  measurementId: "G-G0DPLZFF3X"
+  apiKey: import.meta.env.VITE_API_KEY,
+  authDomain: import.meta.env.VITE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_APP_ID,
+  measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
 // Inicializa o Firebase
@@ -83,15 +83,15 @@ export const getHistory = async (userId: string): Promise<HistoricoItem[]> => {
 
   try {
     const historyRef = collection(db, "historico_copiloto");
-    
+
     const q = query(
-      historyRef, 
+      historyRef,
       where("usuario_id", "==", userId),
       orderBy("data_interacao", "asc")
     );
 
     const querySnapshot = await getDocs(q);
-    
+
     return querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {

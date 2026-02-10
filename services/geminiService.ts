@@ -4,8 +4,9 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { BibleResponseData } from "../types";
 import { SYSTEM_INSTRUCTION } from "../constants";
 
+
 // Configuração da API Key
-const apiKey = "AIzaSyDPO_eVb75BOHqRfuYjhyTH0v7aCNdI1O0";
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 const responseSchema: Schema = {
   type: Type.OBJECT,
@@ -38,7 +39,7 @@ export const sendMessageToGemini = async (userMessage: string): Promise<BibleRes
     });
 
     const responseText = response.text;
-    
+
     if (!responseText) {
       throw new Error("No response text received from Gemini.");
     }
@@ -64,7 +65,7 @@ export const sendMessageToGemini = async (userMessage: string): Promise<BibleRes
 async function saveToHistory(userMessage: string, aiResponse: BibleResponseData) {
   try {
     const user = auth.currentUser;
-    
+
     if (!user) {
       console.warn("Usuário não logado. Histórico não será salvo.");
       return;
@@ -76,7 +77,7 @@ async function saveToHistory(userMessage: string, aiResponse: BibleResponseData)
       ...aiResponse,
       data_interacao: serverTimestamp()
     });
-    
+
     console.log("✅ Conversa salva no Firestore para o usuário:", user.uid);
   } catch (error) {
     console.error("❌ Erro ao salvar no Firestore:", error);
