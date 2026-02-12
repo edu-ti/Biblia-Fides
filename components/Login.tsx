@@ -16,7 +16,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-slate-50 text-center px-4">
       <div className="mb-6">
-        <img src="/logo.png" alt="Biblia Fides Logo" className="w-32 h-auto object-contain" />
+        <img src="imagens/logo.png" alt="Biblia Fides Logo" className="w-82 h-auto object-contain" />
       </div>
 
       <h1 className="text-3xl font-bold text-slate-800 mb-2">Bem-vindo ao Biblia Fides</h1>

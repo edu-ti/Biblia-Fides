@@ -6,7 +6,7 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
       <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Biblia Fides Logo" className="w-10 h-10 object-contain" />
+          <img src="imagens/logo.png" alt="Biblia Fides Logo" className="w-30 h-30 object-contain" />
           <div>
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">{APP_NAME}</h1>
             <p className="text-xs text-slate-500 font-medium">Seu guia espiritual inteligente</p>
