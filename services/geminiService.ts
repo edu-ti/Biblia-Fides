@@ -4,10 +4,10 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { BibleResponseData } from "../types";
 import { SYSTEM_INSTRUCTION } from "../constants";
 
-
 // Configuração da API Key
-const apiKey = import.meta.env.VITE_API_KEY;
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
+// 1. CORREÇÃO DO SCHEMA: Adicionamos o objeto 'referencia_api' aqui
 const responseSchema: Schema = {
   type: Type.OBJECT,
   properties: {
@@ -16,8 +16,18 @@ const responseSchema: Schema = {
     referencia: { type: Type.STRING },
     explicacao: { type: Type.STRING },
     sentimento_detectado: { type: Type.STRING },
+    // Adicionando a estrutura para a API da Bíblia
+    referencia_api: {
+      type: Type.OBJECT,
+      properties: {
+        livro_abrev: { type: Type.STRING },
+        capitulo: { type: Type.NUMBER },
+        versiculo: { type: Type.NUMBER },
+      },
+      required: ["livro_abrev", "capitulo", "versiculo"],
+    },
   },
-  required: ["saudacao", "texto_biblico", "referencia", "explicacao", "sentimento_detectado"],
+  required: ["saudacao", "texto_biblico", "referencia", "explicacao", "sentimento_detectado", "referencia_api"],
 };
 
 export const sendMessageToGemini = async (userMessage: string): Promise<BibleResponseData> => {
@@ -38,16 +48,9 @@ export const sendMessageToGemini = async (userMessage: string): Promise<BibleRes
       },
     });
 
-    // Handle response based on SDK version (try both potential accessors if unsure or log)
-    // Assuming .text() is correct for standard SDKs, but strictly following the user's latest state.
-    // We will stick to what seems standard for @google/genai if possible, or trust the user's revert.
-    // Let's keep response.text() as the user has it now, but wrap in try/catch or just focus on the model change.
-
-    // Note: The user currently has response.text(). 
-    // I will simply return the response text logic as is (or keep it if I'm only targeting the model line), 
-    // but the tool requires contiguous replacement.
-
-    const responseText = response.text;
+    // 2. CORREÇÃO DO MÉTODO: Adicionamos os parênteses ()
+    // Verifica se existe a função text() antes de chamar
+    const responseText = typeof response.text === 'function' ? response.text() : response.text;
 
     if (!responseText) {
       throw new Error("No response text received from Gemini.");
@@ -59,13 +62,13 @@ export const sendMessageToGemini = async (userMessage: string): Promise<BibleRes
 
     return data;
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error calling Gemini API:", error);
     return {
-      saudacao: "Erro",
-      texto_biblico: `Erro técnico: ${error.message || JSON.stringify(error)}`,
-      referencia: "Depuração",
-      explicacao: "Verifique o console ou a chave de API.",
+      saudacao: "Olá.",
+      texto_biblico: "Não foi possível processar sua solicitação no momento.",
+      referencia: "Erro do Sistema",
+      explicacao: "Por favor, verifique sua conexão ou tente novamente mais tarde.",
       sentimento_detectado: "Erro",
     };
   }
