@@ -7,12 +7,11 @@ const TOKEN = import.meta.env.VITE_BIBLE_API_TOKEN;
 // Configuração do Header com Token
 const config = {
   headers: {
-    'Authorization': `Bearer ${TOKEN}`
-  },
-  timeout: 10000 // Timeout de 10 segundos
+    'Authorization': `Bearer ${TOKEN}`,
+    'Content-Type': 'application/json'
+  }
 };
 
-// Tipagem do Versículo que vem da API
 export interface BibleVerse {
   book: {
     name: string;
@@ -24,8 +23,7 @@ export interface BibleVerse {
   text: string;
 }
 
-// 1. Função para pegar um versículo específico
-// Ex: getVerse('nvi', 'sl', 23, 1) -> Salmos 23:1
+// 1. Versículo Específico
 export const getVerse = async (
   version: string = 'nvi',
   bookAbbrev: string,
@@ -33,7 +31,8 @@ export const getVerse = async (
   number: number
 ): Promise<BibleVerse | null> => {
   try {
-    const response = await axios.get(`${BASE_URL}/verses/${version}/${bookAbbrev}/${chapter}/${number}`, config);
+    const safeAbbrev = bookAbbrev.toLowerCase(); // <--- AJUSTE IMPORTANTE
+    const response = await axios.get(`${BASE_URL}/verses/${version}/${safeAbbrev}/${chapter}/${number}`, config);
     return response.data;
   } catch (error) {
     console.error(`Erro ao buscar versículo ${bookAbbrev} ${chapter}:${number}`, error);
@@ -41,22 +40,23 @@ export const getVerse = async (
   }
 };
 
-// 2. Função para pegar um capítulo inteiro (para leitura)
+// 2. Capítulo Inteiro (Usado no Leitor)
 export const getChapter = async (
   version: string = 'nvi',
   bookAbbrev: string,
   chapter: number
 ) => {
   try {
-    const response = await axios.get(`${BASE_URL}/verses/${version}/${bookAbbrev}/${chapter}`, config);
-    return response.data; // Retorna objeto com versículos
+    const safeAbbrev = bookAbbrev.toLowerCase(); // <--- AJUSTE IMPORTANTE
+    const response = await axios.get(`${BASE_URL}/verses/${version}/${safeAbbrev}/${chapter}`, config);
+    return response.data;
   } catch (error) {
     console.error("Erro ao buscar capítulo:", error);
-    throw error; // Propaga o erro para ser tratado no componente
+    return null;
   }
 };
 
-// 3. Função para listar todos os livros (para criar um menu)
+// 3. Listar Livros
 export const getBooks = async () => {
   try {
     const response = await axios.get(`${BASE_URL}/books`, config);
