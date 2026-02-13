@@ -9,18 +9,28 @@ interface InputAreaProps {
 export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, isLoading, initialValue = '' }) => {
   const [input, setInput] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (initialValue) setInput(initialValue);
   }, [initialValue]);
 
+  // Reset lock when loading finishes
+  useEffect(() => {
+    if (!isLoading) {
+      isSubmittingRef.current = false;
+    }
+  }, [isLoading]);
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || isSubmittingRef.current) return;
+
+    isSubmittingRef.current = true;
     onSendMessage(input);
     setInput('');
     if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = 'auto';
     }
   };
 
@@ -55,11 +65,10 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, isLoading, 
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className={`p-3 rounded-full flex-shrink-0 transition-all duration-200 ${
-              input.trim() && !isLoading
+            className={`p-3 rounded-full flex-shrink-0 transition-all duration-200 ${input.trim() && !isLoading
                 ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transform hover:scale-105'
                 : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-            }`}
+              }`}
           >
             {isLoading ? (
               <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -67,12 +76,12 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, isLoading, 
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
             )}
           </button>
         </form>
         <p className="text-center text-xs text-slate-400 mt-2">
-            Biblia Fides pode cometer erros. Considere verificar informações importantes.
+          Biblia Fides pode cometer erros. Considere verificar informações importantes.
         </p>
       </div>
     </div>

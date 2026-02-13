@@ -8,11 +8,12 @@ import { InputArea } from './components/InputArea';
 import { ChatMessage } from './components/ChatMessage';
 import { Login } from './components/Login';
 import { BibleReader } from './components/BibleReader'; // <--- O componente novo!
+import { HistoryView } from './components/HistoryView';
 
 // Serviços e Tipos
 import { Message, MessageType } from './types';
 import { sendMessageToGemini } from './services/geminiService';
-import { getHistory, auth, logout } from './services/firebase';
+import { getHistory, auth, logout, saveHistory } from './services/firebase';
 import { INITIAL_PROMPT } from './constants';
 
 const App: React.FC = () => {
@@ -21,8 +22,9 @@ const App: React.FC = () => {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Estado de Navegação (Chat ou Bíblia)
-  const [currentView, setCurrentView] = useState<'chat' | 'bible'>('chat');
+  const [currentView, setCurrentView] = useState<'chat' | 'bible' | 'history'>('chat');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isFidesMenuOpen, setIsFidesMenuOpen] = useState(true); // Submenu do Chat
 
   // Estados do Chat
   const [messages, setMessages] = useState<Message[]>([]);
@@ -95,12 +97,33 @@ const App: React.FC = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
+
+      // Salvar no Firebase
+      if (user) {
+        saveHistory(user.uid, content, responseData);
+      }
+
     } catch (error) {
       console.error("Failed to get response", error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
+
+  const handleHistorySelect = (messageId: string) => {
+    setCurrentView('chat');
+    setTimeout(() => {
+      const element = document.getElementById(messageId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Optional: Add a highlight effect
+        element.classList.add('bg-indigo-50', 'transition-colors', 'duration-500');
+        setTimeout(() => {
+          element.classList.remove('bg-indigo-50', 'transition-colors', 'duration-500');
+        }, 2000);
+      }
+    }, 100); // Small delay to allow rendering
+  };
 
   if (loadingAuth) return <div className="h-screen flex items-center justify-center bg-slate-50">Carregando...</div>;
   if (!user) return <Login onLoginSuccess={(u) => setUser(u)} />;
@@ -131,13 +154,37 @@ const App: React.FC = () => {
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-2">Menu</div>
 
-            <button
-              onClick={() => { setCurrentView('chat'); setIsSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${currentView === 'chat' ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-            >
-              <span className="text-xl group-hover:scale-110 transition-transform">💬</span>
-              Copiloto IA
-            </button>
+            {/* Submenu Fides Chat IA */}
+            <div>
+              <button
+                onClick={() => setIsFidesMenuOpen(!isFidesMenuOpen)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${['chat', 'history'].includes(currentView) ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl group-hover:scale-110 transition-transform">💬</span>
+                  Fides Chat IA
+                </div>
+                <span className={`transform transition-transform ${isFidesMenuOpen ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+
+              {/* Itens do Submenu */}
+              {isFidesMenuOpen && (
+                <div className="mt-1 ml-4 space-y-1 border-l-2 border-slate-100 pl-2">
+                  <button
+                    onClick={() => { setCurrentView('chat'); setIsSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${currentView === 'chat' ? 'text-indigo-600 font-semibold bg-indigo-50/50' : 'text-slate-500 hover:text-slate-800'}`}
+                  >
+                    <span>Nova Conversa / Chat</span>
+                  </button>
+                  <button
+                    onClick={() => { setCurrentView('history'); setIsSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${currentView === 'history' ? 'text-indigo-600 font-semibold bg-indigo-50/50' : 'text-slate-500 hover:text-slate-800'}`}
+                  >
+                    <span>Histórico</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={() => { setCurrentView('bible'); setIsSidebarOpen(false); }}
@@ -162,7 +209,7 @@ const App: React.FC = () => {
 
             <button
               onClick={logout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-100"
             >
               Sair da conta
             </button>
@@ -186,7 +233,9 @@ const App: React.FC = () => {
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
           </button>
-          <span className="font-bold text-slate-700">{currentView === 'chat' ? 'Copiloto' : 'Bíblia Sagrada'}</span>
+          <span className="font-bold text-slate-700">
+            {currentView === 'chat' ? 'Fides Chat IA' : currentView === 'history' ? 'Histórico' : 'Bíblia Sagrada'}
+          </span>
           <div className="w-8"></div>
         </header>
 
@@ -243,6 +292,15 @@ const App: React.FC = () => {
           {/* TELA 2: LEITOR DA BÍBLIA */}
           {currentView === 'bible' && (
             <BibleReader />
+          )}
+
+          {/* TELA 3: HISTÓRICO */}
+          {currentView === 'history' && (
+            <HistoryView
+              messages={messages}
+              onBackToChat={() => setCurrentView('chat')}
+              onSelectMessage={handleHistorySelect}
+            />
           )}
 
         </main>

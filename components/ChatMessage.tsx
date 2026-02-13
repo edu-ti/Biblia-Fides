@@ -35,7 +35,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
   // Renderização da Mensagem do Usuário
   if (isUser) {
     return (
-      <div className="flex justify-end mb-6 animate-fade-in-up">
+      <div id={message.id} className="flex justify-end mb-6 animate-fade-in-up">
         <div className="bg-indigo-600 text-white py-3 px-5 rounded-2xl rounded-tr-none shadow-md max-w-[85%] md:max-w-[70%]">
           <p className="text-sm md:text-base leading-relaxed">{message.content as string}</p>
         </div>
@@ -48,7 +48,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
 
   return (
     <>
-      <div className="flex justify-start mb-8 animate-fade-in-up">
+      <div id={message.id} className="flex justify-start mb-8 animate-fade-in-up">
         <div className="flex gap-3 max-w-full md:max-w-[85%]">
           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-serif font-bold shadow mt-1">
             BF

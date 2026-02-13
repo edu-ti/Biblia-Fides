@@ -11,7 +11,8 @@ import {
   query,
   orderBy,
   getDocs,
-  where
+  where,
+  addDoc
 } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import { BibleResponseData } from "../types";
@@ -86,13 +87,15 @@ export const getHistory = async (userId: string): Promise<HistoricoItem[]> => {
 
     const q = query(
       historyRef,
-      where("usuario_id", "==", userId),
-      orderBy("data_interacao", "asc")
+      where("usuario_id", "==", userId)
+      // orderBy("data_interacao", "asc") // Removido temporariamente para evitar erro de índice
     );
 
     const querySnapshot = await getDocs(q);
 
-    return querySnapshot.docs.map(doc => {
+    console.log("Histórico buscado (docs):", querySnapshot.size);
+
+    const items = querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -102,14 +105,46 @@ export const getHistory = async (userId: string): Promise<HistoricoItem[]> => {
           texto_biblico: data.texto_biblico || "",
           referencia: data.referencia || "",
           explicacao: data.explicacao || "",
-          sentimento_detectado: data.sentimento_detectado || ""
+          sentimento_detectado: data.sentimento_detectado || "",
+          referencia_api: data.referencia_api || null
         },
         data: data.data_interacao
       };
     });
+
+    // Ordenar em memória
+    return items.sort((a, b) => {
+      const dateA = a.data ? new Date(a.data.seconds * 1000) : new Date(0);
+      const dateB = b.data ? new Date(b.data.seconds * 1000) : new Date(0);
+      return dateA.getTime() - dateB.getTime();
+    });
+
   } catch (error) {
     console.error("Erro ao buscar histórico:", error);
     return [];
+  }
+};
+
+export const saveHistory = async (userId: string, pergunta: string, resposta: BibleResponseData) => {
+  try {
+    // Sanitize data to remove undefined values which Firestore does not support
+    const sanitizedResponse = {
+      saudacao: resposta.saudacao || "",
+      texto_biblico: resposta.texto_biblico || "",
+      referencia: resposta.referencia || "",
+      explicacao: resposta.explicacao || "",
+      sentimento_detectado: resposta.sentimento_detectado || "",
+      referencia_api: resposta.referencia_api || null
+    };
+
+    await addDoc(collection(db, "historico_copiloto"), {
+      usuario_id: userId,
+      pergunta: pergunta,
+      ...sanitizedResponse,
+      data_interacao: new Date()
+    });
+  } catch (error) {
+    console.error("Erro ao salvar histórico:", error);
   }
 };
 
