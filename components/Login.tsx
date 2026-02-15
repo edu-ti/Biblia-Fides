@@ -1,5 +1,5 @@
 import React from 'react';
-import { loginWithGoogle } from '../services/firebase';
+import { signInWithGoogle } from '../services/firebase';
 
 interface LoginProps {
   onLoginSuccess: (user: any) => void;
@@ -7,7 +7,7 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleLogin = async () => {
-    const user = await loginWithGoogle();
+    const user = await signInWithGoogle();
     if (user) {
       onLoginSuccess(user);
     }

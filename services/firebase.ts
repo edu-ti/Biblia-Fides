@@ -8,16 +8,17 @@ import {
 import {
   getFirestore,
   collection,
+  addDoc,
   query,
+  where,
   orderBy,
   getDocs,
-  where,
-  addDoc
+  serverTimestamp,
+  doc,
+  setDoc
 } from 'firebase/firestore';
-import { getAnalytics, isSupported } from 'firebase/analytics';
 import { BibleResponseData } from "../types";
 
-// Configuração do Firebase
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_API_KEY,
   authDomain: import.meta.env.VITE_AUTH_DOMAIN,
@@ -28,31 +29,15 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_MEASUREMENT_ID
 };
 
-// Inicializa o Firebase
 const app = initializeApp(firebaseConfig);
-
-// Inicializa e exporta os serviços
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Inicialização segura do Analytics
-export let analytics: any = null;
-isSupported().then((supported) => {
-  if (supported) {
-    analytics = getAnalytics(app);
-  }
-}).catch((err) => {
-  console.warn("Analytics not supported in this environment:", err);
-});
-
-// ==========================================================
-// MÉTODOS DE AUTENTICAÇÃO
-// ==========================================================
-
-export const loginWithGoogle = async () => {
-  const provider = new GoogleAuthProvider();
+// --- Auth ---
+const googleProvider = new GoogleAuthProvider();
+export const signInWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error) {
     console.error("Erro no login:", error);
@@ -68,84 +53,81 @@ export const logout = async () => {
   }
 };
 
-// ==========================================================
-// MÉTODOS DE HISTÓRICO
-// ==========================================================
+// --- Gestão de Chat (NOVA LÓGICA) ---
 
-export interface HistoricoItem {
-  id: string;
-  pergunta: string;
-  resposta: BibleResponseData;
-  data: any;
-}
-
-export const getHistory = async (userId: string): Promise<HistoricoItem[]> => {
-  if (!userId) return [];
-
+// 1. Criar uma nova conversa (Sessão separada)
+export const createNewChat = async (userId: string, firstMessage: string) => {
   try {
-    const historyRef = collection(db, "historico_copiloto");
+    const chatRef = await addDoc(collection(db, "chats"), {
+      userId: userId,
+      title: firstMessage.substring(0, 30) + "...", // Título automático
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return chatRef.id;
+  } catch (error) {
+    console.error("Erro ao criar chat:", error);
+    return null;
+  }
+};
 
-    const q = query(
-      historyRef,
-      where("usuario_id", "==", userId)
-      // orderBy("data_interacao", "asc") // Removido temporariamente para evitar erro de índice
-    );
-
-    const querySnapshot = await getDocs(q);
-
-    console.log("Histórico buscado (docs):", querySnapshot.size);
-
-    const items = querySnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        pergunta: data.pergunta,
-        resposta: {
-          saudacao: data.saudacao || "",
-          texto_biblico: data.texto_biblico || "",
-          referencia: data.referencia || "",
-          explicacao: data.explicacao || "",
-          sentimento_detectado: data.sentimento_detectado || "",
-          referencia_api: data.referencia_api || null
-        },
-        data: data.data_interacao
-      };
+// 2. Salvar mensagem dentro de uma conversa específica
+export const saveMessageToChat = async (chatId: string, userMessage: string, aiResponse: BibleResponseData) => {
+  try {
+    // Salva na subcoleção 'messages'
+    await addDoc(collection(db, "chats", chatId, "messages"), {
+      pergunta: userMessage,
+      ...aiResponse,
+      createdAt: serverTimestamp()
     });
 
-    // Ordenar em memória
-    return items.sort((a, b) => {
-      const dateA = a.data ? new Date(a.data.seconds * 1000) : new Date(0);
-      const dateB = b.data ? new Date(b.data.seconds * 1000) : new Date(0);
-      return dateA.getTime() - dateB.getTime();
-    });
+    // Atualiza a data da conversa principal (para ela subir no topo da lista)
+    const chatRef = doc(db, "chats", chatId);
+    await setDoc(chatRef, { updatedAt: serverTimestamp() }, { merge: true });
 
   } catch (error) {
-    console.error("Erro ao buscar histórico:", error);
+    console.error("Erro ao salvar mensagem:", error);
+  }
+};
+
+// 3. Listar conversas para o Menu Lateral
+export const getUserChats = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, "chats"),
+      where("userId", "==", userId),
+      orderBy("updatedAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      title: doc.data().title || "Nova Conversa",
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Erro ao buscar chats:", error);
     return [];
   }
 };
 
-export const saveHistory = async (userId: string, pergunta: string, resposta: BibleResponseData) => {
+// 4. Carregar mensagens de UMA conversa específica (ao clicar no histórico)
+export const getChatMessages = async (chatId: string) => {
   try {
-    // Sanitize data to remove undefined values which Firestore does not support
-    const sanitizedResponse = {
-      saudacao: resposta.saudacao || "",
-      texto_biblico: resposta.texto_biblico || "",
-      referencia: resposta.referencia || "",
-      explicacao: resposta.explicacao || "",
-      sentimento_detectado: resposta.sentimento_detectado || "",
-      referencia_api: resposta.referencia_api || null
-    };
+    const q = query(
+      collection(db, "chats", chatId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    const snapshot = await getDocs(q);
 
-    await addDoc(collection(db, "historico_copiloto"), {
-      usuario_id: userId,
-      pergunta: pergunta,
-      ...sanitizedResponse,
-      data_interacao: new Date()
-    });
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
   } catch (error) {
-    console.error("Erro ao salvar histórico:", error);
+    console.error("Erro ao carregar mensagens:", error);
+    return [];
   }
 };
 
-export default app;
+// Mantemos a função antiga apenas para não quebrar nada legado, mas não usaremos mais
+export const getHistory = async (userId: string) => { return []; };

@@ -15,6 +15,17 @@ service cloud.firestore {
       // Permitir atualização/exclusão: Apenas pelo dono do documento.
       allow update, delete: if request.auth != null && resource.data.usuario_id == request.auth.uid;
     }
+
+    // Regras para a coleção 'chats' (Novo sistema de chat)
+    match /chats/{chatId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      match /messages/{messageId} {
+        // Verifica se o chat pai pertence ao usuário
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+      }
+    }
     
     // Bloquear todo o restante por padrão para segurança
     match /{document=**} {
